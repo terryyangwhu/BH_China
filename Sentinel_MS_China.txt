@@ -1,0 +1,111 @@
+//collecting Sentinel-2 multi-spectral imageries across China in winter season of 2017
+//masking out cloudy pixel
+//calculating biophyscial indices
+
+//import boundary
+var BD = ee.FeatureCollection("users/cyangpkucues/shp_files/CN-sheng-A");
+Map.addLayer(BD);
+//Map.centerObject(BD,10);
+print(BD);
+
+//-----------------------s2 multispectral image cloud mask functions-----------------
+var _cloudScore = function(img) {
+  var rescale = function(img, exp, thresholds) {
+    return img.expression(exp, {img: img})
+        .subtract(thresholds[0]).divide(thresholds[1] - thresholds[0]);
+  };
+ 
+ var score = ee.Image.constant(1.0);
+ score = score.min(rescale(img, 'img.blue', [0.1, 0.3]));
+ score = score.min(rescale(img, 'img.red + img.green + img.blue', [0.2, 0.8]));
+ score = score.min(rescale(img, 'img.nir + img.swir1 + img.swir2', [0.3, 0.8]));
+ var ndsi = img.normalizedDifference(['green', 'swir1']);
+ return score.min(rescale(ndsi, 'img', [0.8, 0.6]));
+};
+
+function rmCloudByScore(image, thread) {
+ var preBands = ["B2","B3","B4","B8","B11","B12"];
+ var newBands = ['blue','green','red','nir','swir1','swir2'];
+ var score = _cloudScore(image.select(preBands, newBands));
+ score = score.multiply(100).byte().rename('cloud');
+ return image.addBands(score).updateMask(score.lte(thread));
+}
+
+
+function scaleImage(image) {
+ var time_start = image.get("system:time_start");
+ image = image.divide(10000);
+ image = image.set("system:time_start", time_start);
+ return image;
+}
+
+//-------------------------import S2 multispectral image--------------------------
+var s2 = ee.ImageCollection("COPERNICUS/S2")
+
+var startDate = "2017-1-1";
+var endDate = "2017-12-31";
+
+Map.centerObject(BD,8);
+var s2Imgs = s2.filterDate(startDate, endDate)
+  .filterBounds(BD)
+  .map(scaleImage)
+  .map(function(image) {return rmCloudByScore(image, 70);});
+print(s2Imgs)
+var s2Imgs_avg = s2Imgs.median().clip(BD);
+Map.addLayer(s2Imgs_avg, {min:0, max:0.3, bands:["B8", "B4", "B3"]});
+
+var ndvi = s2Imgs_avg.normalizedDifference(["B8","B4"]);
+Map.addLayer(ndvi, {min:0, max:1});
+Export.image.toDrive({
+  image: ndvi,
+  description: "s2ndvi_avg_2017_CN",
+  fileNamePrefix: "s2ndvi_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});
+
+var ndbi = s2Imgs_avg.normalizedDifference(["B11","B8"]);
+Map.addLayer(ndbi, {min:0, max:1});
+Export.image.toDrive({
+  image: ndbi,
+  description: "s2ndbi_avg_2017_CN",
+  fileNamePrefix: "s2ndbi_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});
+
+var albedo = s2Imgs_avg.expression(
+    '0.356 * blue + 0.130 * red + 0.373 * nir + 0.085 * swir1 + 0.072 * swir2 - 0.0018',
+    {
+        blue: s2Imgs_avg.select('B2'),
+        red: s2Imgs_avg.select('B4'),
+        nir: s2Imgs_avg.select('B8'),
+        swir1: s2Imgs_avg.select('B11'),
+        swir2: s2Imgs_avg.select('B12')
+    });
+Map.addLayer(albedo, {min:0, max:1});
+Export.image.toDrive({
+  image: albedo,
+  description: "s2albedo_avg_2017_CN",
+  fileNamePrefix: "s2albedo_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});
+
+var ui = s2Imgs_avg.normalizedDifference(["B12","B8"]);
+Map.addLayer(ui, {min:0, max:1});
+Export.image.toDrive({
+  image: ndbi,
+  description: "s2ui_avg_2017_CN",
+  fileNamePrefix: "s2ui_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});

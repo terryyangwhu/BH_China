@@ -1,0 +1,95 @@
+//collecting Sentinel-1 SAR subset (two polarization) across China in winter season of 2017
+
+//import boundary
+var BD = ee.FeatureCollection("users/cyangpkucues/shp_files/CN-sheng-A");
+Map.addLayer(BD);
+//Map.centerObject(BD,10);
+print(BD);
+
+//---------------------------import S1 VV polarization----------------------------
+var s1vv1 = ee.ImageCollection('COPERNICUS/S1_GRD')
+          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+          .filter(ee.Filter.eq('instrumentMode', 'IW'))
+          //.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_start','69'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_stop','69'))
+          .select('VV')
+          .filterBounds(BD)
+          .filterDate('2017-01-01','2017-03-31');
+//print(s1vv1);
+var s1vv1_avg = s1vv1.median().clip(BD);
+print(s1vv1_avg);
+
+
+var s1vv2 = ee.ImageCollection('COPERNICUS/S1_GRD')
+          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+          .filter(ee.Filter.eq('instrumentMode', 'IW'))
+          //.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_start','69'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_stop','69'))
+          .select('VV')
+          .filterBounds(BD)
+          .filterDate('2017-11-01','2017-12-31');
+//print(s1vv2);
+var s1vv2_avg = s1vv2.median().clip(BD);
+print(s1vv2_avg);
+
+var s1vv = s1vv1_avg.addBands(s1vv2_avg);
+var s1vv_avg = s1vv1.median().clip(BD);
+print(s1vv);
+print(s1vv_avg);
+Map.addLayer(s1vv_avg);
+
+Export.image.toDrive({
+  image: s1vv_avg.select('VV'),
+  description: "s1vv_avg_2017_CN",
+  fileNamePrefix: "s1vv_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});
+
+//-------------------------import S1 VH polarization--------------------------
+var s1vh1 = ee.ImageCollection('COPERNICUS/S1_GRD')
+          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+          .filter(ee.Filter.eq('instrumentMode', 'IW'))
+          //.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_start','69'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_stop','69'))
+          .select('VH')
+          .filterBounds(BD)
+          .filterDate('2017-01-01','2017-03-31');
+//print(s1vv1);
+var s1vh1_avg = s1vh1.median().clip(BD);
+print(s1vh1_avg);
+
+
+var s1vh2 = ee.ImageCollection('COPERNICUS/S1_GRD')
+          .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+          .filter(ee.Filter.eq('instrumentMode', 'IW'))
+          //.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_start','69'))
+          //.filter(ee.Filter.eq('relativeOrbitNumber_stop','69'))
+          .select('VH')
+          .filterBounds(BD)
+          .filterDate('2017-11-01','2017-12-31');
+//print(s1vv2);
+var s1vh2_avg = s1vh2.median().clip(BD);
+print(s1vh2_avg);
+
+var s1vh = s1vh1_avg.addBands(s1vh2_avg);
+var s1vh_avg = s1vh1.median().clip(BD);
+print(s1vh);
+print(s1vh_avg);
+Map.addLayer(s1vh_avg);
+
+Export.image.toDrive({
+  image: s1vh_avg.select('VH'),
+  description: "s1vh_avg_2017_CN",
+  fileNamePrefix: "s1vh_avg_2017_CN",
+  scale: 10,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});

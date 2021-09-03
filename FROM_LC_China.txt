@@ -1,0 +1,23 @@
+//collecting FROM land cover subset across China in 2017
+
+//import boundary
+var BD = ee.FeatureCollection("users/cyangpkucues/shp_files/CN-sheng-A");
+Map.addLayer(BD);
+//Map.centerObject(BD,10);
+print(BD);
+
+//FROM-GLC
+var IS = ee.Image("Tsinghua/FROM-GLC/GAIA/v10");
+var IS_CN = IS.clip(BD);
+print(IS_CN);
+Map.addLayer(IS_CN);
+
+Export.image.toDrive({
+  image: IS_CN,
+  description: "GAIA_CN",
+  fileNamePrefix: "GAIA_CN",
+  scale: 30,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e13
+});

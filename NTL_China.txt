@@ -1,0 +1,33 @@
+//collecting VIIRS night-time light subset across China in 2017
+
+//import boundary
+var BD = ee.FeatureCollection("users/cyangpkucues/shp_files/CN-sheng-A");
+Map.addLayer(BD);
+//Map.centerObject(BD,10);
+print(BD);
+
+var dataset = ee.ImageCollection('NOAA/VIIRS/DNB/MONTHLY_V1/VCMCFG')
+                  .filter(ee.Filter.date('2017-01-01', '2017-12-31'));
+                  
+var startDate = "2017-1-1";
+var endDate = "2017-12-31";
+Map.centerObject(BD,8);
+
+var NTL = dataset.select('avg_rad')
+  .filterDate(startDate, endDate)
+  .filterBounds(BD);
+NTL = NTL.mean().clip(BD);
+//var nighttimeVis = {min: 0.0, max: 60.0};
+//Map.centerObject(BD,8);
+//Map.addLayer(NTL, nighttimeVis, 'Nighttime');
+//Map.addLayer(NTL);
+
+Export.image.toDrive({
+  image: NTL,
+  description: "NTL_avg_2017_CN",
+  fileNamePrefix: "NTL_avg_2017_CN",
+  scale: 750,
+  region: BD,
+  crs: "EPSG:4326",
+  maxPixels: 1e39
+});
